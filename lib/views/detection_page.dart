@@ -1,11 +1,13 @@
 import 'dart:io';
 
-import 'package:detection_pets_chilli/constant/theme/theme.dart';
-import 'package:detection_pets_chilli/providers/image_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+
+import '../constant/theme/theme.dart';
+import '../providers/detecition_notifier.dart';
+import 'widgets/fuzzy_dialog.dart';
 
 class DetectionPage extends StatefulWidget {
   const DetectionPage({super.key});
@@ -15,6 +17,15 @@ class DetectionPage extends StatefulWidget {
 }
 
 class _DetectionPageState extends State<DetectionPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = Provider.of<DetectionViewModel>(context, listen: false);
+      viewModel.initialize();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,22 +37,97 @@ class _DetectionPageState extends State<DetectionPage> {
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(defaultPadding),
-        child: Consumer<ImageNotifier>(
-          builder: (context, imageNotifier, child) {
+        child: Consumer<DetectionViewModel>(
+          builder: (context, viewModel, child) {
             return Column(
               spacing: 10.h,
               children: [
-                _buildImageDisplay(imageNotifier),
+                _buildImageDisplay(viewModel),
+                if (viewModel.detectionResult.isNotEmpty) ...[
+                  _buildDetectionResult(viewModel),
+                ],
                 _itemMenu(Icons.image, 'Dari Galeri', () {
-                  imageNotifier.selectImage(ImageSource.gallery);
+                  viewModel.pickImage(ImageSource.gallery);
                 }),
                 _itemMenu(Icons.camera_alt, 'Dari Kamera', () {
-                  imageNotifier.selectImage(ImageSource.camera);
+                  viewModel.pickImage(ImageSource.camera);
                 }),
               ],
             );
           },
         ),
+      ),
+      bottomNavigationBar: Consumer<DetectionViewModel>(
+        builder: (context, viewModel, child) {
+          if (viewModel.isChiliLeafDetected && !viewModel.isLoading) {
+            return Container(
+              padding: EdgeInsets.all(16.r),
+              color: Colors.white,
+              child: ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => FuzzyDialog(
+                      onDetectionPressed: (symptoms) {
+                        viewModel.performFuzzyDetection(symptoms);
+                      },
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  minimumSize: Size(double.infinity, 50.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                child: Text(
+                  'Analisis Gejala Lanjut',
+                  style: whiteTextStyle.copyWith(
+                    fontWeight: semiBold,
+                    fontSize: 18.sp,
+                  ),
+                ),
+              ),
+            );
+          }
+          return SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetectionResult(DetectionViewModel viewModel) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            viewModel.detectionResult,
+            style: blackTextStyle.copyWith(fontSize: 18.sp, fontWeight: bold),
+          ),
+          if (viewModel.confidenceText.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: 8.h),
+              child: Text(
+                viewModel.confidenceText,
+                style: blackTextStyle.copyWith(fontSize: 16.sp),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -76,15 +162,15 @@ class _DetectionPageState extends State<DetectionPage> {
     );
   }
 
-  Widget _buildImageDisplay(ImageNotifier imageNotifier) {
-    return imageNotifier.selectedImage != null
+  Widget _buildImageDisplay(DetectionViewModel detectionViewModel) {
+    return detectionViewModel.selectedFile != null
         ? Stack(
             clipBehavior: Clip.none,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(20.r),
                 child: Image.file(
-                  File(imageNotifier.selectedImage!.path),
+                  File(detectionViewModel.selectedFile!.path),
                   height: 200.h,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -94,7 +180,7 @@ class _DetectionPageState extends State<DetectionPage> {
                 top: -10,
                 right: -8,
                 child: GestureDetector(
-                  onTap: imageNotifier.deleteImage,
+                  onTap: detectionViewModel.deleteImage,
                   child: _buildDeleteButton(),
                 ),
               ),

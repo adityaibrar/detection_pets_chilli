@@ -56,8 +56,6 @@ class _StarterPageState extends State<StarterPage> {
     );
   }
 
-  // ========================
-  // Halaman Pertama (with Next button)
   Widget _buildFirstPage(VoidCallback onNext) {
     return Padding(
       padding: EdgeInsets.all(defaultPadding),
@@ -112,8 +110,6 @@ class _StarterPageState extends State<StarterPage> {
     );
   }
 
-  // ========================
-  // Halaman Kedua
   Widget _buildSecondPage(VoidCallback onStartEnjoy) {
     return Padding(
       padding: EdgeInsets.all(defaultPadding),
