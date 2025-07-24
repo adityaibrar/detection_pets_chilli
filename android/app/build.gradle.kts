@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.ibrardev.detection_pets_chilli"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
